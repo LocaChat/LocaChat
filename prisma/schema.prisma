@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  phone     String   @unique
+  name      String?
+  avatar    String?
+  isOnline  Boolean  @default(false)
+  lastSeen  DateTime @default(now())
+  createdAt DateTime @default(now())
+  
+  sessions  Session[]
+  messages  Message[]
+  
+  @@index([phone])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique
+  deviceId     String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Chat {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  messages Message[]
+  participants ChatParticipant[]
+}
+
+model ChatParticipant {
+  id     String @id @default(uuid())
+  chatId String
+  userId String
+  
+  chat Chat @relation(fields: [chatId], references: [id])
+  
+  @@unique([chatId, userId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chatId    String
+  senderId  String
+  content   String
+  encrypted Boolean  @default(true)
+  mediaUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  chat   Chat @relation(fields: [chatId], references: [id])
+  sender User @relation(fields: [senderId], references: [id])
+  
+  @@index([chatId, createdAt])
+}
+
+model Call {
+  id        String     @id @default(uuid())
+  callerId  String
+  calleeId  String
+  status    CallStatus @default(RINGING)
+  startedAt DateTime?
+  endedAt   DateTime?
+  duration  Int?
+  createdAt DateTime   @default(now())
+  
+  @@index([callerId])
+  @@index([calleeId])
+}
+
+enum CallStatus {
+  RINGING
+  CONNECTED
+  ENDED
+  MISSED
+  REJECTED
+}
